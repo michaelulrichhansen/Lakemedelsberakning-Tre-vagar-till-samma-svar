@@ -88,9 +88,9 @@
                 .generic-method-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
                 .generic-method-button {
                     margin-top: 0; padding: 8px 12px; border-radius: 6px;
-                    background: #fff; color: #195; border: 2px solid #3b7; cursor: pointer;
+                    background: #fff; color: #1d4ed8; border: 2px solid #1d4ed8; cursor: pointer;
                 }
-                .generic-method-button.active { background: #176b45; border-color: #176b45; color: #fff; }
+                .generic-method-button.active { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
                 .generic-method-panel { display: none; color: #555; margin-top: 16px; line-height: 1.6; overflow-x: auto; }
                 .generic-proportion-table { border-collapse: collapse; margin: 6px 0 10px; min-width: 250px; }
                 .generic-proportion-table th, .generic-proportion-table td {

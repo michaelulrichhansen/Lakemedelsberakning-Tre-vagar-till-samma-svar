@@ -6,11 +6,11 @@
     <title>Läkemedelsberäkning – Inhalationer</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; background: #f7f7f7;}
-        h1 { color: #195; }
+        h1 { color: #1d4ed8; }
         .card { background: #fff; padding: 32px; max-width: 480px; margin: auto; border-radius: 16px; box-shadow: 0 6px 24px #0001;}
         label, input, button { font-size: 1rem; margin-top: 12px; }
         input[type="number"], input[type="text"] { width: 140px; padding: 4px 10px; border-radius: 6px; border: 1px solid #aaa;}
-        button { border-radius: 6px; padding: 8px 16px; border: none; background: #3b7; color: #fff; cursor: pointer; }
+        button { border-radius: 6px; padding: 8px 16px; border: none; background: #1d4ed8; color: #fff; cursor: pointer; }
         #result { font-weight: bold; margin-top: 16px;}
         #calculation { color: #555; }
         @media (max-width: 500px) { body { margin: 16px; } .card { max-width: none; padding: 20px; } h1 { font-size: 1.8rem; } label { display: block; } input[type="number"], input[type="text"] { width: 100%; box-sizing: border-box; } button { display: block; width: 100%; margin-top: 12px; } }
@@ -89,7 +89,7 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-ser
 
             if (studentAnswer === correctAnswer) {
                 document.getElementById("result").textContent = "Rätt svar!";
-                document.getElementById("result").style.color = "#195";
+                document.getElementById("result").style.color = "#1d4ed8";
             } else {
                 document.getElementById("result").textContent = `Fel svar. Det rätta svaret är ${correctAnswer} ${answerUnit}.`;
                 document.getElementById("result").style.color = "#a33";
