@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Läkemedelsberäkning – Injektionshastighet</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f7f7f7; }
+        h1 { color: #195; }
+        .card { background: #fff; padding: 32px; max-width: 520px; margin: auto; border-radius: 16px; box-shadow: 0 6px 24px #0001; }
+        label, input, button { font-size: 1rem; margin-top: 12px; }
+        input[type="number"], input[type="text"] { width: 140px; padding: 4px 10px; border-radius: 6px; border: 1px solid #aaa; }
+        button { border-radius: 6px; padding: 8px 16px; border: none; background: #3b7; color: #fff; cursor: pointer; }
+        #result { font-weight: bold; margin-top: 16px; }
+        #calculation { color: #555; }
+        .method-chooser { display: none; margin-top: 18px; }
+        .method-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+        .method-button { margin-top: 0; background: #fff; color: #195; border: 2px solid #3b7; }
+        .method-button.active { background: #176b45; border-color: #176b45; color: #fff; }
+        .alternate-solution { display: none; color: #555; margin-top: 18px; overflow-x: auto; }
+        .fraction { display: inline-flex; flex-direction: column; text-align: center; vertical-align: middle; margin: 0 4px; }
+        .fraction .top { border-bottom: 1px solid #444; padding: 0 6px 2px; }
+        .fraction .bottom { padding: 2px 6px 0; }
+        .cancel-unit { text-decoration: line-through; text-decoration-color: #b33; text-decoration-thickness: 2px; }
+        .proportion-table { border-collapse: collapse; margin: 8px 0 12px; min-width: 260px; }
+        .proportion-table th, .proportion-table td { border: 1px solid #aaa; padding: 7px 12px; text-align: center; }
+        .proportion-table th { background: #f1f1f1; }
+        .solution-step { margin: 10px 0; }
+        @media (max-width: 500px) { body { margin: 16px; } .card { max-width: none; padding: 20px; } h1 { font-size: 1.8rem; } label { display: block; } input[type="number"], input[type="text"] { width: 100%; box-sizing: border-box; } button { display: block; width: 100%; margin-top: 12px; } .method-buttons { display: grid; grid-template-columns: 1fr; } .method-button { width: 100%; } .proportion-table { width: 100%; min-width: 0; } }
+    </style>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js"></script>
+</head>
+<body>
+<header class="site-brand"><a href="index.html">Läkemedelsberäkning – tre vägar till samma svar</a><p>Formelmetoden, proportionsmetoden och dimensionsanalys</p><p>Michael Ulrich Hansen</p></header>
+    <div class="card">
+        <h1>Läkemedelsberäkning<br>Injektionshastighet</h1>
+        <p id="problem"></p>
+        <button onclick="randomizeCase()">Slumpa värden</button>
+        <br><br>
+        <label id="answerLabel" for="answer"></label>
+        <input type="text" id="answer" inputmode="decimal" placeholder="">
+        <button onclick="checkAnswer()">Kontrollera svar</button>
+        <p id="result" aria-live="polite"></p>
+        <p id="calculation"></p>
+        <div id="methodChooser" class="method-chooser">
+            <div class="method-buttons" role="group" aria-label="Välj lösningsmetod">
+                <button id="formulaButton" class="method-button active" type="button" onclick="showSolutionMethod('formula')">✓ Formelmetoden</button>
+                <button id="dimensionButton" class="method-button" type="button" onclick="showSolutionMethod('dimension')">Dimensionsanalys</button>
+                <button id="proportionButton" class="method-button" type="button" onclick="showSolutionMethod('proportion')">Proportionsmetoden</button>
+            </div>
+            <div id="dimensionSolution" class="alternate-solution"></div>
+            <div id="proportionSolution" class="alternate-solution"></div>
+        </div>
+        <p style="font-size:0.95em;color:#444;">Avrunda svaret till två decimaler vid behov. Både punkt och komma accepteras som decimaltecken.</p>
+        <p style="margin-top:24px;"><a href="index.html" target="_top" style="color:#1166cc;text-decoration:none;">← Till startsidan</a></p>
+    </div>
+
+    <script>
+        const ratesMgMin = [0.2, 0.25, 0.4, 0.5, 0.6, 0.75, 0.8, 1, 1.2, 1.5, 2];
+        const strengthsMgMl = [2.5, 5, 10, 20, 25, 50];
+        const timesMin = [5, 10, 15, 20, 25, 30];
+        let correctAnswer = 0;
+        let calcText = "";
+        let answerUnit = "";
+        let answerDecimals = 2;
+        let nextQuestionType = 0;
+        let dimensionSolution = "";
+        let proportionSolution = "";
+
+        const pick = values => values[Math.floor(Math.random() * values.length)];
+
+        function formatNumber(value, maxDecimals = 2) {
+            const factor = 10 ** maxDecimals;
+            const rounded = Math.round((value + Number.EPSILON) * factor) / factor;
+            return rounded.toString().replace(".", ",");
+        }
+
+        function fraction(top, bottom) {
+            return `<span class="fraction"><span class="top">${top}</span><span class="bottom">${bottom}</span></span>`;
+        }
+
+        function crossTable(leftHeading, rightHeading, leftKnown, rightKnown, leftUnknown, rightUnknown) {
+            const numberPart = value => (String(value).match(/[-+]?\d+(?:[.,]\d+)?/) || [String(value)])[0];
+            return `<table class="proportion-table"><tr><th>${leftHeading}</th><th>${rightHeading}</th></tr>` +
+                `<tr><td>${leftKnown}</td><td>${rightKnown}</td></tr>` +
+                `<tr><td>${leftUnknown}</td><td>${rightUnknown}</td></tr></table>` +
+                `<div><strong>Direkt proportionellt samband:</strong> motsvarande storheter placeras i samma kolumn.</div>` +
+                `<div>${leftKnown} : ${rightKnown} = ${leftUnknown} : ${rightUnknown}</div>` +
+                `<div>${numberPart(leftKnown)} × x = ${numberPart(rightKnown)} × ${numberPart(leftUnknown)}</div>`;
+        }
+
+        function showSolutionMethod(method) {
+            const calculation = document.getElementById("calculation");
+            const dimension = document.getElementById("dimensionSolution");
+            const proportion = document.getElementById("proportionSolution");
+            calculation.style.display = method === "formula" ? "block" : "none";
+            dimension.style.display = method === "dimension" ? "block" : "none";
+            proportion.style.display = method === "proportion" ? "block" : "none";
+
+            ["formula", "dimension", "proportion"].forEach(name => {
+                const button = document.getElementById(`${name}Button`);
+                const selected = name === method;
+                button.classList.toggle("active", selected);
+                button.textContent = `${selected ? "✓ " : ""}${name === "formula" ? "Formelmetoden" : name === "dimension" ? "Dimensionsanalys" : "Proportionsmetoden"}`;
+                button.setAttribute("aria-pressed", selected ? "true" : "false");
+            });
+        }
+
+        function randomizeCase() {
+            answerDecimals = 2;
+            // Frågetyperna roterar så att studenten får öva på olika okända storheter.
+            const type = nextQuestionType;
+            nextQuestionType = (nextQuestionType + 1) % 5;
+            const strength = pick(strengthsMgMl);
+            const rate = pick(ratesMgMin);
+            let problemText = "";
+
+            if (type === 0) {
+                // mg/min + mg/mL + tid -> total mL
+                const time = pick(timesMin);
+                const volumePerMinute = rate / strength;
+                correctAnswer = volumePerMinute * time;
+                answerUnit = "mL";
+                problemText = `En patient ska få en injektionshastighet på <strong>${formatNumber(rate)} mg/minut</strong>. Läkemedlet kommer i en styrka på <strong>${formatNumber(strength)} mg/mL</strong>. Efter <strong>${time} minuter</strong>, hur många <strong>mL</strong> av läkemedlet har patienten fått?`;
+                calcText = `${formatNumber(rate)} mg/min × 1 mL/${formatNumber(strength)} mg = ${formatNumber(volumePerMinute, 4)} mL/min<br>${formatNumber(volumePerMinute, 4)} mL/min × ${time} min = ${formatNumber(correctAnswer)} mL`;
+                dimensionSolution = `<strong>Dimensionsanalys</strong><div class="solution-step"><strong>Steg 1:</strong> ${formatNumber(rate)} <span class="cancel-unit">mg</span>/min × ${fraction(`1 mL`, `${formatNumber(strength)} <span class="cancel-unit">mg</span>`)} = ${formatNumber(volumePerMinute, 4)} mL/min</div><div class="solution-step"><strong>Steg 2:</strong> ${formatNumber(volumePerMinute, 4)} mL/<span class="cancel-unit">min</span> × ${time} <span class="cancel-unit">min</span> = ${formatNumber(correctAnswer)} mL</div><strong>Svar:</strong> ${formatNumber(correctAnswer)} mL`;
+                proportionSolution = `<strong>Proportionsmetoden</strong><div class="solution-step"><strong>Steg 1:</strong>${crossTable("Dos", "Volym", `${formatNumber(strength)} mg`, "1 mL", `${formatNumber(rate)} mg/min`, "x mL/min")}x = ${formatNumber(rate)} × 1 ÷ ${formatNumber(strength)} = ${formatNumber(volumePerMinute, 4)} mL/min</div><div class="solution-step"><strong>Steg 2:</strong>${crossTable("Tid", "Volym", "1 min", `${formatNumber(volumePerMinute, 4)} mL`, `${time} min`, "x mL")}x = ${time} × ${formatNumber(volumePerMinute, 4)} ÷ 1 = ${formatNumber(correctAnswer)} mL</div><strong>Svar:</strong> ${formatNumber(correctAnswer)} mL`;
+            } else if (type === 1) {
+                // mg/min + mg/mL -> mL/min
+                correctAnswer = rate / strength;
+                answerUnit = "mL/min";
+                problemText = `Ett läkemedel ordineras med doshastigheten <strong>${formatNumber(rate)} mg/minut</strong>. Läkemedlets styrka är <strong>${formatNumber(strength)} mg/mL</strong>. Vilken volymhastighet ska användas, uttryckt i <strong>mL/minut</strong>?`;
+                calcText = `${formatNumber(rate)} mg/min × 1 mL/${formatNumber(strength)} mg = ${formatNumber(correctAnswer)} mL/min`;
+                dimensionSolution = `<strong>Dimensionsanalys</strong><div class="solution-step"><strong>Steg 1:</strong> ${formatNumber(rate)} <span class="cancel-unit">mg</span>/min × ${fraction(`1 mL`, `${formatNumber(strength)} <span class="cancel-unit">mg</span>`)} = ${formatNumber(correctAnswer)} mL/min</div><strong>Svar:</strong> ${formatNumber(correctAnswer)} mL/min`;
+                proportionSolution = `<strong>Proportionsmetoden</strong><div class="solution-step">${crossTable("Dos", "Volym", `${formatNumber(strength)} mg`, "1 mL", `${formatNumber(rate)} mg/min`, "x mL/min")}x = ${formatNumber(rate)} × 1 ÷ ${formatNumber(strength)} = ${formatNumber(correctAnswer)} mL/min</div><strong>Svar:</strong> ${formatNumber(correctAnswer)} mL/min`;
+            } else if (type === 2) {
+                // mL/min + mg/mL -> mg/min
+                const volumeRate = rate / strength;
+                correctAnswer = volumeRate * strength;
+                answerUnit = "mg/min";
+                problemText = `Ett läkemedel med styrkan <strong>${formatNumber(strength)} mg/mL</strong> ges med volymhastigheten <strong>${formatNumber(volumeRate, 4)} mL/minut</strong>. Hur många <strong>mg/minut</strong> får patienten?`;
+                calcText = `${formatNumber(volumeRate, 4)} mL/min × ${formatNumber(strength)} mg/1 mL = ${formatNumber(correctAnswer)} mg/min`;
+                dimensionSolution = `<strong>Dimensionsanalys</strong><div class="solution-step"><strong>Steg 1:</strong> ${formatNumber(volumeRate, 4)} <span class="cancel-unit">mL</span>/min × ${fraction(`${formatNumber(strength)} mg`, `1 <span class="cancel-unit">mL</span>`)} = ${formatNumber(correctAnswer)} mg/min</div><strong>Svar:</strong> ${formatNumber(correctAnswer)} mg/min`;
+                proportionSolution = `<strong>Proportionsmetoden</strong><div class="solution-step">${crossTable("Volym", "Dos", "1 mL", `${formatNumber(strength)} mg`, `${formatNumber(volumeRate, 4)} mL/min`, "x mg/min")}x = ${formatNumber(volumeRate, 4)} × ${formatNumber(strength)} ÷ 1 = ${formatNumber(correctAnswer)} mg/min</div><strong>Svar:</strong> ${formatNumber(correctAnswer)} mg/min`;
+            } else if (type === 3) {
+                // total mL + mg/mL + tid -> mg/min
+                const time = pick(timesMin);
+                const totalVolume = (rate / strength) * time;
+                const totalDose = totalVolume * strength;
+                correctAnswer = totalDose / time;
+                answerUnit = "mg/min";
+                problemText = `Under <strong>${time} minuter</strong> har en patient fått <strong>${formatNumber(totalVolume)} mL</strong> av ett läkemedel med styrkan <strong>${formatNumber(strength)} mg/mL</strong>. Vilken injektionshastighet i <strong>mg/minut</strong> motsvarar detta?`;
+                calcText = `${formatNumber(totalVolume)} mL × ${formatNumber(strength)} mg/1 mL = ${formatNumber(totalDose)} mg<br>${formatNumber(totalDose)} mg × 1/${time} min = ${formatNumber(correctAnswer)} mg/min`;
+                dimensionSolution = `<strong>Dimensionsanalys</strong><div class="solution-step"><strong>Steg 1:</strong> ${formatNumber(totalVolume)} <span class="cancel-unit">mL</span> × ${fraction(`${formatNumber(strength)} mg`, `1 <span class="cancel-unit">mL</span>`)} = ${formatNumber(totalDose)} mg</div><div class="solution-step"><strong>Steg 2:</strong> ${formatNumber(totalDose)} mg × ${fraction("1", `${time} min`)} = ${formatNumber(correctAnswer)} mg/min</div><strong>Svar:</strong> ${formatNumber(correctAnswer)} mg/min`;
+                proportionSolution = `<strong>Proportionsmetoden</strong><div class="solution-step"><strong>Steg 1:</strong>${crossTable("mL", "mg", "1", formatNumber(strength), formatNumber(totalVolume), "x")}x = ${formatNumber(totalVolume)} × ${formatNumber(strength)} ÷ 1 = ${formatNumber(totalDose)} mg</div><div class="solution-step"><strong>Steg 2:</strong>${crossTable("min", "mg", time, formatNumber(totalDose), "1", "x")}x = ${formatNumber(totalDose)} × 1 ÷ ${time} = ${formatNumber(correctAnswer)} mg/min</div><strong>Svar:</strong> ${formatNumber(correctAnswer)} mg/min`;
+            } else {
+                // total mL + tid -> mL/min
+                const time = pick(timesMin);
+                const volumeRate = rate / strength;
+                const totalVolume = volumeRate * time;
+                correctAnswer = totalVolume / time;
+                answerUnit = "mL/min";
+                problemText = `En patient har fått <strong>${formatNumber(totalVolume)} mL</strong> läkemedel under <strong>${time} minuter</strong>. Vilken volymhastighet i <strong>mL/minut</strong> har använts?`;
+                calcText = `${formatNumber(totalVolume)} mL × 1/${time} min = ${formatNumber(correctAnswer)} mL/min`;
+                dimensionSolution = `<strong>Dimensionsanalys</strong><div class="solution-step"><strong>Steg 1:</strong> ${formatNumber(totalVolume)} mL × ${fraction("1", `${time} min`)} = ${formatNumber(correctAnswer)} mL/min</div><strong>Svar:</strong> ${formatNumber(correctAnswer)} mL/min`;
+                proportionSolution = `<strong>Proportionsmetoden</strong><div class="solution-step">${crossTable("min", "mL", time, formatNumber(totalVolume), "1", "x")}x = ${formatNumber(totalVolume)} × 1 ÷ ${time} = ${formatNumber(correctAnswer)} mL/min</div><strong>Svar:</strong> ${formatNumber(correctAnswer)} mL/min`;
+            }
+
+            document.getElementById("problem").innerHTML = problemText;
+            document.getElementById("answerLabel").textContent = `Ange antal ${answerUnit} (två decimaler):`;
+            document.getElementById("answer").value = "";
+            document.getElementById("result").textContent = "";
+            document.getElementById("calculation").innerHTML = "";
+            document.getElementById("methodChooser").style.display = "none";
+            document.getElementById("answer").focus();
+        }
+
+        function checkAnswer() {
+            const rawAnswer = document.getElementById("answer").value.trim().replace(",", ".");
+            const userAnswer = Number(rawAnswer);
+            const factor = 10 ** answerDecimals;
+            const roundedCorrect = Math.round((correctAnswer + Number.EPSILON) * factor) / factor;
+
+            if (rawAnswer === "" || !Number.isFinite(userAnswer)) {
+                document.getElementById("result").textContent = "Skriv ett giltigt tal.";
+                document.getElementById("result").style.color = "#b33";
+                document.getElementById("calculation").innerHTML = "";
+                document.getElementById("methodChooser").style.display = "none";
+                return;
+            }
+
+            // Godkänn svaret avrundat till två decimaler, med liten tolerans.
+            if (Math.abs(userAnswer - roundedCorrect) < 0.005) {
+                document.getElementById("result").textContent = `Rätt! Svaret är ${formatNumber(roundedCorrect)} ${answerUnit}.`;
+                document.getElementById("result").style.color = "#195";
+            } else {
+                document.getElementById("result").textContent = `Inte riktigt. Rätt svar är ${formatNumber(roundedCorrect)} ${answerUnit}.`;
+                document.getElementById("result").style.color = "#b33";
+            }
+
+            document.getElementById("calculation").innerHTML = `<strong>Beräkning:</strong><br>${calcText}`;
+            document.getElementById("dimensionSolution").innerHTML = dimensionSolution;
+            document.getElementById("proportionSolution").innerHTML = proportionSolution;
+            document.getElementById("methodChooser").style.display = "block";
+            showSolutionMethod("formula");
+        }
+
+        document.getElementById("answer").addEventListener("keydown", event => {
+            if (event.key === "Enter") checkAnswer();
+        });
+
+        randomizeCase();
+    </script>
+<script src="exam_bridge.js?v=20260827-15"></script>
+</body>
+</html>
+

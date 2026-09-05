@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Läkemedelsberäkning – Droppar</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f7f7f7;}
+        h1 { color: #195; }
+        .card { background: #fff; padding: 32px; max-width: 480px; margin: auto; border-radius: 16px; box-shadow: 0 6px 24px #0001;}
+        label, input, button { font-size: 1rem; margin-top: 12px; }
+        input[type="number"], input[type="text"] { width: 140px; padding: 4px 10px; border-radius: 6px; border: 1px solid #aaa;}
+        button { border-radius: 6px; padding: 8px 16px; border: none; background: #3b7; color: #fff; cursor: pointer; }
+        #result { font-weight: bold; margin-top: 16px;}
+        #calculation { color: #555; }
+        @media (max-width: 500px) { body { margin: 16px; } .card { max-width: none; padding: 20px; } h1 { font-size: 1.8rem; } label { display: block; } input[type="number"], input[type="text"] { width: 100%; box-sizing: border-box; } button { display: block; width: 100%; margin-top: 12px; } }
+    </style>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js"></script>
+</head>
+<body>
+<header class="site-brand"><a href="index.html">Läkemedelsberäkning – tre vägar till samma svar</a><p>Formelmetoden, proportionsmetoden och dimensionsanalys</p><p>Michael Ulrich Hansen</p></header>
+    <div class="card">
+        <h1>Läkemedelsberäkning<br>Droppar</h1>
+        <p id="problem"></p>
+        <button onclick="randomizeValues()">Slumpa värden</button>
+        <br><br>
+        <label id="answerLabel" for="answer"></label>
+        <input type="text" id="answer" inputmode="decimal" placeholder="Ditt svar">
+        <button onclick="checkAnswer()">Kontrollera svar</button>
+        <p id="result" aria-live="polite"></p>
+        <p id="calculation"></p>
+        <p style="font-size:0.95em;color:#444;">Avrunda till två decimaler vid behov. Både punkt och komma accepteras.</p>
+        <p style="margin-top:24px;"><a href="index.html" target="_top" style="color:#1166cc;text-decoration:none;">← Till startsidan</a></p>
+    </div>
+    <script>
+        const dropsPerMlValues = [15, 20, 25];
+        const doseVolumes = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5];
+        const bottleVolumes = [10, 15, 20, 30];
+        const strengths = [0.5, 0.8, 1, 1.5, 2, 2.5, 5, 10];
+        const medicationCases = [
+            { drops: 20, dropsPerMl: 16, strength: 0.8 },
+            { drops: 18, dropsPerMl: 20, strength: 2 },
+            { drops: 24, dropsPerMl: 20, strength: 1.5 },
+            { drops: 15, dropsPerMl: 20, strength: 2 },
+            { drops: 30, dropsPerMl: 20, strength: 1 },
+            { drops: 12, dropsPerMl: 15, strength: 2.5 },
+            { drops: 25, dropsPerMl: 20, strength: 0.8 }
+        ];
+
+        let questionType, correctAnswer, answerUnit, calculationText;
+        let nextQuestionType = Math.floor(Math.random() * 6);
+
+        const pick = values => values[Math.floor(Math.random() * values.length)];
+
+        function formatNumber(value) {
+            return Number(value.toFixed(2)).toString().replace(".", ",");
+        }
+
+        function randomizeValues() {
+            questionType = nextQuestionType;
+            nextQuestionType = (nextQuestionType + 1) % 6;
+
+            const dropsPerMl = pick(dropsPerMlValues);
+            const doseVolume = pick(doseVolumes);
+            const drops = dropsPerMl * doseVolume;
+            let problemText;
+
+            if (questionType === 0) {
+                correctAnswer = drops;
+                answerUnit = "droppar";
+                problemText =
+                    `En patient ska få ${formatNumber(doseVolume)} mL av ett flytande läkemedel. ` +
+                    `Enligt flaskans anvisning motsvarar 1 mL ${dropsPerMl} droppar. Hur många droppar ska ges?`;
+                calculationText =
+                    `${formatNumber(doseVolume)} mL × ${dropsPerMl} droppar/mL = ${formatNumber(correctAnswer)} droppar`;
+            } else if (questionType === 1) {
+                correctAnswer = doseVolume;
+                answerUnit = "mL";
+                problemText =
+                    `En patient har fått ${drops} droppar av ett flytande läkemedel. ` +
+                    `Enligt flaskans anvisning motsvarar 1 mL ${dropsPerMl} droppar. Hur många mL har patienten fått?`;
+                calculationText =
+                    `${drops} droppar ÷ ${dropsPerMl} droppar/mL = ${formatNumber(correctAnswer)} mL`;
+            } else if (questionType === 2) {
+                const currentCase = pick(medicationCases);
+                const volumeMl = currentCase.drops / currentCase.dropsPerMl;
+                const doseMg = volumeMl * currentCase.strength;
+                correctAnswer = doseMg;
+                answerUnit = "mg";
+                problemText =
+                    `En patient får ${currentCase.drops} droppar av ett läkemedel med styrkan ${formatNumber(currentCase.strength)} mg/mL. ` +
+                    `Enligt flaskans anvisning motsvarar 1 mL ${currentCase.dropsPerMl} droppar. Hur många mg läkemedel har patienten fått?`;
+                calculationText =
+                    `${currentCase.drops} droppar ÷ ${currentCase.dropsPerMl} droppar/mL = ${formatNumber(volumeMl)} mL<br>` +
+                    `${formatNumber(volumeMl)} mL × ${formatNumber(currentCase.strength)} mg/mL = ${formatNumber(correctAnswer)} mg`;
+            } else if (questionType === 3) {
+                const strength = pick(strengths);
+                const prescribedDose = strength * doseVolume;
+                correctAnswer = drops;
+                answerUnit = "droppar";
+                problemText =
+                    `En patient är ordinerad ${formatNumber(prescribedDose)} mg av ett läkemedel med styrkan ${formatNumber(strength)} mg/mL. ` +
+                    `Enligt flaskans anvisning motsvarar 1 mL ${dropsPerMl} droppar. Hur många droppar ska patienten få?`;
+                calculationText =
+                    `${formatNumber(prescribedDose)} mg ÷ ${formatNumber(strength)} mg/mL = ${formatNumber(doseVolume)} mL<br>` +
+                    `${formatNumber(doseVolume)} mL × ${dropsPerMl} droppar/mL = ${formatNumber(correctAnswer)} droppar`;
+            } else if (questionType === 4) {
+                let bottleVolume;
+                do {
+                    bottleVolume = pick(bottleVolumes);
+                } while (!Number.isInteger(bottleVolume / doseVolume));
+                const numberOfDoses = bottleVolume / doseVolume;
+                correctAnswer = numberOfDoses;
+                answerUnit = "doser";
+                problemText =
+                    `En flaska innehåller ${bottleVolume} mL läkemedel. En dos består av ${drops} droppar och enligt flaskans anvisning ` +
+                    `motsvarar 1 mL ${dropsPerMl} droppar. Till hur många hela doser räcker flaskan?`;
+                calculationText =
+                    `${drops} droppar/dos ÷ ${dropsPerMl} droppar/mL = ${formatNumber(doseVolume)} mL/dos<br>` +
+                    `${bottleVolume} mL ÷ ${formatNumber(doseVolume)} mL/dos = ${formatNumber(correctAnswer)} doser`;
+            } else {
+                const strength = pick(strengths);
+                const administeredDose = strength * doseVolume;
+                correctAnswer = strength;
+                answerUnit = "mg/mL";
+                problemText =
+                    `En patient har fått ${drops} droppar, vilket motsvarar en dos på ${formatNumber(administeredDose)} mg. ` +
+                    `Enligt flaskans anvisning motsvarar 1 mL ${dropsPerMl} droppar. Vilken styrka i mg/mL har läkemedlet?`;
+                calculationText =
+                    `${drops} droppar ÷ ${dropsPerMl} droppar/mL = ${formatNumber(doseVolume)} mL<br>` +
+                    `${formatNumber(administeredDose)} mg ÷ ${formatNumber(doseVolume)} mL = ${formatNumber(correctAnswer)} mg/mL`;
+            }
+
+            document.getElementById("problem").textContent = problemText;
+            document.getElementById("answerLabel").textContent = `Ange ditt svar i ${answerUnit}:`;
+            document.getElementById("answer").value = "";
+            document.getElementById("result").textContent = "";
+            document.getElementById("calculation").innerHTML = "";
+        }
+
+        function checkAnswer() {
+            const rawAnswer = document.getElementById("answer").value.trim().replace(",", ".");
+            const studentAnswer = Number(rawAnswer);
+
+            if (rawAnswer === "" || !Number.isFinite(studentAnswer)) {
+                document.getElementById("result").textContent = "Skriv ett giltigt tal.";
+                document.getElementById("result").style.color = "#a33";
+                document.getElementById("calculation").innerHTML = "";
+                return;
+            }
+
+            if (Math.abs(studentAnswer - correctAnswer) < 0.001) {
+                document.getElementById("result").textContent = "Rätt svar!";
+                document.getElementById("result").style.color = "#195";
+            } else {
+                document.getElementById("result").textContent = `Fel svar. Rätt svar är ${formatNumber(correctAnswer)} ${answerUnit}.`;
+                document.getElementById("result").style.color = "#a33";
+            }
+
+            document.getElementById("calculation").innerHTML = `<strong>Beräkning:</strong><br>${calculationText}`;
+        }
+
+        document.getElementById("answer").addEventListener("keydown", event => {
+            if (event.key === "Enter") checkAnswer();
+        });
+
+        window.onload = randomizeValues;
+    </script>
+<script src="exam_bridge.js?v=20260827-15"></script>
+</body>
+</html>
+

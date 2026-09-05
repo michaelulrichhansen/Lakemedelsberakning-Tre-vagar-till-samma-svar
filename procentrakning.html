@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Läkemedelsberäkning – Procenträkning</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f7f7f7;}
+        h1 { color: #195; }
+        .card { background: #fff; padding: 32px; max-width: 530px; margin: auto; border-radius: 16px; box-shadow: 0 6px 24px #0001;}
+        label, input, button { font-size: 1rem; margin-top: 12px; }
+        input[type="number"], input[type="text"] { width: 140px; padding: 4px 10px; border-radius: 6px; border: 1px solid #aaa;}
+        button { border-radius: 6px; padding: 8px 16px; border: none; background: #3b7; color: #fff; cursor: pointer; }
+        #result { font-weight: bold; margin-top: 16px;}
+        #calculation { color: #555; }
+        #formula { font-size: 0.97em; color: #666; background: #f0f0f8; border-radius: 7px; padding: 10px; margin-bottom: 12px;}
+        @media (max-width: 500px) { body { margin: 16px; } .card { max-width: none; padding: 20px; } h1 { font-size: 1.8rem; } label { display: block; } input[type="number"], input[type="text"] { width: 100%; box-sizing: border-box; } button { display: block; width: 100%; margin-top: 12px; } }
+    </style>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js"></script>
+</head>
+<body>
+<header class="site-brand"><a href="index.html">Läkemedelsberäkning – tre vägar till samma svar</a><p>Formelmetoden, proportionsmetoden och dimensionsanalys</p><p>Michael Ulrich Hansen</p></header>
+    <div class="card">
+        <h1>Läkemedelsberäkning<br>Procenträkning</h1>
+        <div id="formula">
+            <b>Grunder:</b><br>
+            <b>1 g/100 mL = 1 % (w/v)</b><br>
+            <b>1 g/100 g = 1 % (w/w)</b><br>
+            <b>1 mL/100 mL = 1 % (v/v)</b>
+        </div>
+        <p id="problem"></p>
+        <button onclick="randomizeCase()">Slumpa värden</button>
+        <br><br>
+        <label id="answerLabel" for="answer"></label>
+        <input type="text" id="answer" inputmode="decimal" placeholder="Ditt svar">
+        <button onclick="checkAnswer()">Kontrollera svar</button>
+        <p id="result" aria-live="polite"></p>
+        <p id="calculation"></p>
+        <p style="font-size:0.95em;color:#444;">Avrunda till två decimaler vid behov. Både punkt och komma accepteras.</p>
+        <p style="margin-top:24px;"><a href="index.html" target="_top" style="color:#1166cc;text-decoration:none;">← Till startsidan</a></p>
+    </div>
+    <script>
+        const percentages = [0.5, 1, 2, 2.5, 5, 10, 20];
+        const smallVolumesMl = [1, 2, 3, 5, 10, 20];
+        const largeVolumesMl = [50, 100, 150, 200, 250, 500];
+        const ointmentWeightsG = [5, 10, 20, 25, 50];
+        const volumePercentTotalsMl = [100, 200, 250, 500, 1000];
+
+        let correctAnswer, answerUnit, calcText, proportionSolution;
+        let questionType;
+        let nextQuestionType = 0;
+
+        const pick = values => values[Math.floor(Math.random() * values.length)];
+
+        function formatNumber(value) {
+            return Number(value.toFixed(2)).toString().replace(".", ",");
+        }
+
+        const proportionTable = (leftHeading, rightHeading, leftTop, rightTop, leftBottom, rightBottom) =>
+            `<table class="generic-proportion-table"><tr><th>${leftHeading}</th><th>${rightHeading}</th></tr>` +
+            `<tr><td>${leftTop}</td><td>${rightTop}</td></tr>` +
+            `<tr><td>${leftBottom}</td><td>${rightBottom}</td></tr></table>` +
+            `<div style="margin-top:8px"><strong>Direkt proportionellt samband:</strong> motsvarande storheter placeras i samma kolumn.</div>`;
+
+        const directEquation = (leftTop, rightTop, leftBottom, result, unit) =>
+            `<div>${leftTop} : ${rightTop} = ${leftBottom} : x</div>` +
+            `<div>${leftTop} × x = ${rightTop} × ${leftBottom}</div>` +
+            `<div>x = (${rightTop} × ${leftBottom}) ÷ ${leftTop} = ${result} ${unit}</div>`;
+
+        function randomizeCase() {
+            questionType = nextQuestionType;
+            nextQuestionType = (nextQuestionType + 1) % 7;
+
+            const percent = pick(percentages);
+
+            if (questionType === 0) {
+                correctAnswer = percent * 10;
+                answerUnit = "mg/mL";
+                document.getElementById("problem").textContent =
+                    `En infusionsvätska har styrkan ${formatNumber(percent)} % (vikt/volym). Vilken styrka motsvarar detta i mg/mL?`;
+                calcText =
+                    `${formatNumber(percent)} % = ${formatNumber(percent)} g/100 mL<br>` +
+                    `${formatNumber(percent)} g/100 mL × 1000 mg/1 g = ${formatNumber(percent * 1000)} mg/100 mL<br>` +
+                    `${formatNumber(percent * 1000)} mg ÷ 100 mL = ${formatNumber(correctAnswer)} mg/mL`;
+                proportionSolution = `<div><strong>Steg 1:</strong> ${formatNumber(percent)} % = ${formatNumber(percent)} g/100 mL = ${formatNumber(percent * 1000)} mg/100 mL</div>` +
+                    `<div style="margin-top:8px"><strong>Steg 2:</strong></div>` +
+                    proportionTable("Volym (mL)", "Mängd (mg)", "100 mL", `${formatNumber(percent * 1000)} mg`, "1 mL", "x mg") +
+                    directEquation("100", formatNumber(percent * 1000), "1", formatNumber(correctAnswer), "mg/mL");
+            } else if (questionType === 1) {
+                const strengthMgMl = percent * 10;
+                correctAnswer = percent;
+                answerUnit = "% (vikt/volym)";
+                document.getElementById("problem").textContent =
+                    `En infusionsvätska har styrkan ${formatNumber(strengthMgMl)} mg/mL. Vilken styrka motsvarar detta i vikt/volymprocent?`;
+                calcText =
+                    `${formatNumber(strengthMgMl)} mg/mL × 100 mL = ${formatNumber(strengthMgMl * 100)} mg/100 mL<br>` +
+                    `${formatNumber(strengthMgMl * 100)} mg/100 mL × 1 g/1000 mg = ${formatNumber(percent)} g/100 mL<br>` +
+                    `${formatNumber(percent)} g/100 mL = ${formatNumber(correctAnswer)} %`;
+                proportionSolution = proportionTable("Volym (mL)", "Mängd (mg)", "1 mL", `${formatNumber(strengthMgMl)} mg`, "100 mL", "x mg") +
+                    directEquation("1", formatNumber(strengthMgMl), "100", formatNumber(strengthMgMl * 100), "mg/100 mL") +
+                    `<div style="margin-top:8px">${formatNumber(strengthMgMl * 100)} mg = ${formatNumber(percent)} g. Därför är styrkan ${formatNumber(percent)} g/100 mL = ${formatNumber(percent)} %.</div>`;
+            } else if (questionType === 2) {
+                const volumeMl = pick(smallVolumesMl);
+                const strengthMgMl = percent * 10;
+                correctAnswer = strengthMgMl * volumeMl;
+                answerUnit = "mg";
+                document.getElementById("problem").textContent =
+                    `En patient ordineras ${volumeMl} mL av en ${formatNumber(percent)}-procentig läkemedelslösning (vikt/volym). Hur stor dos i mg motsvarar detta?`;
+                calcText =
+                    `${formatNumber(percent)} % = ${formatNumber(percent)} g/100 mL = ${formatNumber(strengthMgMl)} mg/mL<br>` +
+                    `${formatNumber(strengthMgMl)} mg/mL × ${volumeMl} mL = ${formatNumber(correctAnswer)} mg`;
+                proportionSolution = `<div><strong>Steg 1:</strong> ${formatNumber(percent)} % = ${formatNumber(percent * 1000)} mg/100 mL = ${formatNumber(strengthMgMl)} mg/mL</div>` +
+                    `<div style="margin-top:8px"><strong>Steg 2:</strong></div>` +
+                    proportionTable("Volym (mL)", "Dos (mg)", "1 mL", `${formatNumber(strengthMgMl)} mg`, `${volumeMl} mL`, "x mg") +
+                    directEquation("1", formatNumber(strengthMgMl), `${volumeMl}`, formatNumber(correctAnswer), "mg");
+            } else if (questionType === 3) {
+                const volumeMl = pick(largeVolumesMl);
+                correctAnswer = (percent * volumeMl) / 100;
+                answerUnit = "g";
+                document.getElementById("problem").textContent =
+                    `En patient har fått ${volumeMl} mL av en ${formatNumber(percent)}-procentig infusionslösning (vikt/volym). Hur stor dos i gram har administrerats?`;
+                calcText =
+                    `${formatNumber(percent)} % = ${formatNumber(percent)} g/100 mL<br>` +
+                    `${volumeMl} mL × ${formatNumber(percent)} g/100 mL = ${formatNumber(correctAnswer)} g`;
+                proportionSolution = proportionTable("Volym (mL)", "Dos (g)", "100 mL", `${formatNumber(percent)} g`, `${volumeMl} mL`, "x g") +
+                    directEquation("100", formatNumber(percent), `${volumeMl}`, formatNumber(correctAnswer), "g");
+            } else if (questionType === 4) {
+                const totalWeightG = pick(ointmentWeightsG);
+                const activeAmountG = (percent * totalWeightG) / 100;
+                correctAnswer = activeAmountG * 1000;
+                answerUnit = "mg";
+                document.getElementById("problem").textContent =
+                    `En tub innehåller ${totalWeightG} g salva med styrkan ${formatNumber(percent)} % (vikt/vikt). Hur många mg verksam substans finns i hela tuben?`;
+                calcText =
+                    `${formatNumber(percent)} % = ${formatNumber(percent)} g/100 g salva<br>` +
+                    `${totalWeightG} g salva × ${formatNumber(percent)} g/100 g = ${formatNumber(activeAmountG)} g<br>` +
+                    `${formatNumber(activeAmountG)} g × 1000 mg/g = ${formatNumber(correctAnswer)} mg`;
+                proportionSolution = proportionTable("Salvans vikt (g)", "Verksam substans (g)", "100 g", `${formatNumber(percent)} g`, `${totalWeightG} g`, "x g") +
+                    directEquation("100", formatNumber(percent), `${totalWeightG}`, formatNumber(activeAmountG), "g") +
+                    `<div style="margin-top:8px">${formatNumber(activeAmountG)} g × 1000 mg/g = ${formatNumber(correctAnswer)} mg</div>`;
+            } else if (questionType === 5) {
+                const totalVolumeMl = pick(volumePercentTotalsMl);
+                correctAnswer = (percent * totalVolumeMl) / 100;
+                answerUnit = "mL";
+                document.getElementById("problem").textContent =
+                    `En lösning ska beredas till totalt ${totalVolumeMl} mL med styrkan ${formatNumber(percent)} % (volym/volym). Hur många mL av den verksamma vätskan behövs?`;
+                calcText =
+                    `${formatNumber(percent)} % = ${formatNumber(percent)} mL/100 mL<br>` +
+                    `${totalVolumeMl} mL × ${formatNumber(percent)} mL/100 mL = ${formatNumber(correctAnswer)} mL`;
+                proportionSolution = proportionTable("Lösningens volym (mL)", "Verksam vätska (mL)", "100 mL", `${formatNumber(percent)} mL`, `${totalVolumeMl} mL`, "x mL") +
+                    directEquation("100", formatNumber(percent), `${totalVolumeMl}`, formatNumber(correctAnswer), "mL");
+            } else {
+                const totalWeightG = pick(ointmentWeightsG);
+                const activeAmountG = (percent * totalWeightG) / 100;
+                correctAnswer = percent;
+                answerUnit = "% (vikt/vikt)";
+                document.getElementById("problem").textContent =
+                    `En salva innehåller ${formatNumber(activeAmountG)} g verksam substans i totalt ${totalWeightG} g salva. Vilken är salvans styrka i vikt/viktprocent?`;
+                calcText =
+                    `${formatNumber(activeAmountG)} g ÷ ${totalWeightG} g × 100 % = ${formatNumber(correctAnswer)} %`;
+                proportionSolution = proportionTable("Salvans vikt (g)", "Verksam substans (g)", `${totalWeightG} g`, `${formatNumber(activeAmountG)} g`, "100 g", "x g") +
+                    directEquation(`${totalWeightG}`, formatNumber(activeAmountG), "100", formatNumber(correctAnswer), "g/100 g") +
+                    `<div style="margin-top:8px">${formatNumber(correctAnswer)} g verksam substans per 100 g salva = ${formatNumber(correctAnswer)} %.</div>`;
+            }
+
+            document.getElementById("answerLabel").textContent = `Ange ditt svar i ${answerUnit}:`;
+            document.getElementById("answer").value = "";
+            document.getElementById("result").textContent = "";
+            document.getElementById("calculation").textContent = "";
+        }
+
+        function checkAnswer() {
+            const rawAnswer = document.getElementById("answer").value.trim().replace(",", ".");
+            const userAnswer = Number(rawAnswer);
+            const roundedCorrect = Math.round((correctAnswer + Number.EPSILON) * 100) / 100;
+
+            if (rawAnswer === "" || !Number.isFinite(userAnswer)) {
+                document.getElementById("result").textContent = "Skriv ett giltigt tal.";
+                document.getElementById("result").style.color = "#a33";
+                document.getElementById("calculation").textContent = "";
+                return;
+            }
+
+            if (Math.abs(userAnswer - roundedCorrect) < 0.005) {
+                document.getElementById("result").textContent = "Rätt svar!";
+                document.getElementById("result").style.color = "#195";
+            } else {
+                document.getElementById("result").textContent = `Fel svar. Rätt svar är ${formatNumber(roundedCorrect)} ${answerUnit}.`;
+                document.getElementById("result").style.color = "#a33";
+            }
+
+            document.getElementById("calculation").innerHTML = `<strong>Beräkning:</strong><br>${calcText}`;
+        }
+
+        document.getElementById("answer").addEventListener("keydown", event => {
+            if (event.key === "Enter") checkAnswer();
+        });
+
+        window.getCustomProportionSolution = () => proportionSolution;
+
+        window.onload = randomizeCase;
+    </script>
+<script src="exam_bridge.js?v=20260827-17"></script>
+</body>
+</html>
+

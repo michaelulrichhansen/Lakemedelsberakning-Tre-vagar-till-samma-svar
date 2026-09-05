@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Läkemedelsberäkning – Inhalationer</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f7f7f7;}
+        h1 { color: #195; }
+        .card { background: #fff; padding: 32px; max-width: 480px; margin: auto; border-radius: 16px; box-shadow: 0 6px 24px #0001;}
+        label, input, button { font-size: 1rem; margin-top: 12px; }
+        input[type="number"], input[type="text"] { width: 140px; padding: 4px 10px; border-radius: 6px; border: 1px solid #aaa;}
+        button { border-radius: 6px; padding: 8px 16px; border: none; background: #3b7; color: #fff; cursor: pointer; }
+        #result { font-weight: bold; margin-top: 16px;}
+        #calculation { color: #555; }
+        @media (max-width: 500px) { body { margin: 16px; } .card { max-width: none; padding: 20px; } h1 { font-size: 1.8rem; } label { display: block; } input[type="number"], input[type="text"] { width: 100%; box-sizing: border-box; } button { display: block; width: 100%; margin-top: 12px; } }
+    </style>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js"></script>
+</head>
+<body>
+<header class="site-brand"><a href="index.html">Läkemedelsberäkning – tre vägar till samma svar</a><p>Formelmetoden, proportionsmetoden och dimensionsanalys</p><p>Michael Ulrich Hansen</p></header>
+    <div class="card">
+        <h1>Läkemedelsberäkning<br>Inhalationer</h1>
+        <p id="question" style="font-weight:bold;"></p>
+        <button onclick="randomizeValues()">Slumpa värden</button>
+        <br><br>
+        <label id="answerLabel" for="answer">Ange ditt svar (heltal):</label>
+        <input type="number" id="answer" inputmode="decimal" placeholder="Svara med heltal">
+        <button onclick="checkAnswer()">Kontrollera svar</button>
+        <p id="result" aria-live="polite"></p>
+        <p id="calculation"></p>
+        <p style="font-size:0.95em;color:#444;">Svara med ett heltal.</p>
+        <p style="margin-top:24px;"><a href="index.html" target="_top" style="color:#1166cc;text-decoration:none;">← Till startsidan</a></p>
+    </div>
+    <script>
+        const dosesPerInhalation = [50, 100, 200, 250, 400];
+        const inhalationCounts = [1, 2, 3, 4];
+
+        let dosePerInhalation, numberOfInhalations, totalDose;
+        let questionType, correctAnswer, answerUnit, calculationText;
+
+        const pick = values => values[Math.floor(Math.random() * values.length)];
+
+        function randomizeValues() {
+            dosePerInhalation = pick(dosesPerInhalation);
+            numberOfInhalations = pick(inhalationCounts);
+            totalDose = dosePerInhalation * numberOfInhalations;
+            questionType = Math.floor(Math.random() * 3);
+
+            let questionText = "";
+
+            if (questionType === 0) {
+                correctAnswer = numberOfInhalations;
+                answerUnit = "inhalationer";
+                questionText = `En patient är ordinerad en total dos på ${totalDose} mikrogram. Inhalatorn ger ${dosePerInhalation} mikrogram per inhalation. Hur många inhalationer ska patienten ta?`;
+                calculationText = `${totalDose} mikrogram ÷ ${dosePerInhalation} mikrogram/inhalation = ${correctAnswer} inhalationer`;
+            } else if (questionType === 1) {
+                correctAnswer = totalDose;
+                answerUnit = "mikrogram";
+                questionText = `En inhalator ger ${dosePerInhalation} mikrogram per inhalation. Patienten ska ta ${numberOfInhalations} inhalationer. Hur stor total dos i mikrogram får patienten?`;
+                calculationText = `${dosePerInhalation} mikrogram/inhalation × ${numberOfInhalations} inhalationer = ${correctAnswer} mikrogram`;
+            } else {
+                correctAnswer = dosePerInhalation;
+                answerUnit = "mikrogram/inhalation";
+                questionText = `En patient får en total dos på ${totalDose} mikrogram fördelad på ${numberOfInhalations} inhalationer. Hur många mikrogram innehåller varje inhalation?`;
+                calculationText = `${totalDose} mikrogram ÷ ${numberOfInhalations} inhalationer = ${correctAnswer} mikrogram/inhalation`;
+            }
+
+            document.getElementById("question").textContent = questionText;
+            document.getElementById("answerLabel").textContent = `Ange ditt svar i ${answerUnit} (heltal):`;
+            document.getElementById("result").textContent = "";
+            document.getElementById("calculation").textContent = "";
+            document.getElementById("answer").value = "";
+        }
+
+        function checkAnswer() {
+            const rawAnswer = document.getElementById("answer").value.trim().replace(",", ".");
+            const studentAnswer = Number(rawAnswer);
+
+            if (rawAnswer === "" || !Number.isFinite(studentAnswer)) {
+                document.getElementById("result").textContent = "Skriv ett giltigt tal.";
+                document.getElementById("result").style.color = "#a33";
+                document.getElementById("calculation").textContent = "";
+                return;
+            }
+
+            if (studentAnswer === correctAnswer) {
+                document.getElementById("result").textContent = "Rätt svar!";
+                document.getElementById("result").style.color = "#195";
+            } else {
+                document.getElementById("result").textContent = `Fel svar. Det rätta svaret är ${correctAnswer} ${answerUnit}.`;
+                document.getElementById("result").style.color = "#a33";
+            }
+
+            document.getElementById("calculation").textContent = `Beräkning: ${calculationText}`;
+        }
+
+        document.getElementById("answer").addEventListener("keydown", event => {
+            if (event.key === "Enter") checkAnswer();
+        });
+
+        window.onload = randomizeValues;
+    </script>
+<script src="exam_bridge.js?v=20260827-15"></script>
+</body>
+</html>
+

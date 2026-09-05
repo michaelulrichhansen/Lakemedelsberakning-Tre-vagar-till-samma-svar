@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Läkemedelsberäkning – Depotplåster</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f7f7f7;}
+        h1 { color: #195; }
+        .card { background: #fff; padding: 32px; max-width: 500px; margin: auto; border-radius: 16px; box-shadow: 0 6px 24px #0001;}
+        label, input, button { font-size: 1rem; margin-top: 12px; }
+        input[type="number"], input[type="text"] { width: 140px; padding: 4px 10px; border-radius: 6px; border: 1px solid #aaa;}
+        button { border-radius: 6px; padding: 8px 16px; border: none; background: #3b7; color: #fff; cursor: pointer; }
+        #result { font-weight: bold; margin-top: 16px;}
+        #calculation { color: #555; }
+        @media (max-width: 500px) { body { margin: 16px; } .card { max-width: none; padding: 20px; } h1 { font-size: 1.8rem; } label { display: block; } input[type="number"], input[type="text"] { width: 100%; box-sizing: border-box; } button { display: block; width: 100%; margin-top: 12px; } }
+    </style>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js"></script>
+</head>
+<body>
+<header class="site-brand"><a href="index.html">Läkemedelsberäkning – tre vägar till samma svar</a><p>Formelmetoden, proportionsmetoden och dimensionsanalys</p><p>Michael Ulrich Hansen</p></header>
+    <div class="card">
+        <h1>Läkemedelsberäkning<br>Depotplåster</h1>
+        <p id="problem"></p>
+        <button onclick="randomizeValues()">Slumpa värden</button>
+        <br><br>
+        <label id="answerLabel" for="answer"></label>
+        <input type="text" id="answer" inputmode="decimal" placeholder="Ditt svar">
+        <button onclick="checkAnswer()">Kontrollera svar</button>
+        <p id="result" aria-live="polite"></p>
+        <p id="calculation"></p>
+        <p style="font-size:0.95em;color:#444;">Avrunda till två decimaler vid behov. Både punkt och komma accepteras.</p>
+        <p style="margin-top:24px;"><a href="index.html" target="_top" style="color:#1166cc;text-decoration:none;">← Till startsidan</a></p>
+    </div>
+    <script>
+        const strengthsPerHour = [12.5, 25, 37.5, 50, 75, 100];
+        const durationsHours = [12, 24, 36, 48, 60, 72];
+        const examCases = [
+            { microgramsPer24Hours: 960, hours: 10 },
+            { microgramsPer24Hours: 1500, hours: 12 },
+            { microgramsPer24Hours: 1200, hours: 8 },
+            { microgramsPer24Hours: 600, hours: 12 },
+            { microgramsPer24Hours: 2400, hours: 6 },
+            { microgramsPer24Hours: 1800, hours: 16 },
+            { microgramsPer24Hours: 720, hours: 20 },
+            { microgramsPer24Hours: 2400, hours: 18 }
+        ];
+
+        let strengthPerHour, durationHours, totalMicrograms;
+        let questionType, correctAnswer, answerUnit, calculationText;
+        let nextIsExamCase = true;
+
+        const pick = values => values[Math.floor(Math.random() * values.length)];
+
+        function formatNumber(value) {
+            return Number(value.toFixed(2)).toString().replace(".", ",");
+        }
+
+        function randomizeValues() {
+            if (nextIsExamCase) {
+                nextIsExamCase = false;
+                randomizeExamCase();
+                return;
+            }
+
+            nextIsExamCase = true;
+            strengthPerHour = pick(strengthsPerHour);
+            durationHours = pick(durationsHours);
+            totalMicrograms = strengthPerHour * durationHours;
+            questionType = Math.floor(Math.random() * 4);
+
+            if (questionType === 0) {
+                correctAnswer = totalMicrograms;
+                answerUnit = "mikrogram";
+                document.getElementById("problem").textContent =
+                    `Ett depotplåster frisätter ${formatNumber(strengthPerHour)} mikrogram per timme. Plåstret har suttit på i ${durationHours} timmar. Hur många mikrogram läkemedel har plåstret frisatt under tiden?`;
+                calculationText = `${formatNumber(strengthPerHour)} mikrogram/timme × ${durationHours} timmar = ${formatNumber(correctAnswer)} mikrogram`;
+            } else if (questionType === 1) {
+                correctAnswer = strengthPerHour;
+                answerUnit = "mikrogram/timme";
+                document.getElementById("problem").textContent =
+                    `Ett depotplåster har frisatt totalt ${formatNumber(totalMicrograms)} mikrogram under ${durationHours} timmar. Vilken styrka har plåstret i mikrogram per timme?`;
+                calculationText = `${formatNumber(totalMicrograms)} mikrogram ÷ ${durationHours} timmar = ${formatNumber(correctAnswer)} mikrogram/timme`;
+            } else if (questionType === 2) {
+                correctAnswer = durationHours;
+                answerUnit = "timmar";
+                document.getElementById("problem").textContent =
+                    `Ett depotplåster frisätter ${formatNumber(strengthPerHour)} mikrogram per timme. Plåstret har frisatt totalt ${formatNumber(totalMicrograms)} mikrogram. Hur många timmar har plåstret suttit på?`;
+                calculationText = `${formatNumber(totalMicrograms)} mikrogram ÷ ${formatNumber(strengthPerHour)} mikrogram/timme = ${correctAnswer} timmar`;
+            } else {
+                correctAnswer = (strengthPerHour * 24) / 1000;
+                answerUnit = "mg per dygn";
+                document.getElementById("problem").textContent =
+                    `Ett depotplåster frisätter ${formatNumber(strengthPerHour)} mikrogram per timme. Hur många mg läkemedel frisätter plåstret under ett dygn?`;
+                calculationText = `${formatNumber(strengthPerHour)} mikrogram/timme × 24 timmar = ${formatNumber(strengthPerHour * 24)} mikrogram. ${formatNumber(strengthPerHour * 24)} mikrogram × 1 mg/1000 mikrogram = ${formatNumber(correctAnswer)} mg`;
+            }
+
+            document.getElementById("answerLabel").textContent = `Ange ditt svar i ${answerUnit}:`;
+            document.getElementById("answer").value = "";
+            document.getElementById("result").textContent = "";
+            document.getElementById("calculation").innerHTML = "";
+        }
+
+        function randomizeExamCase() {
+            const currentCase = pick(examCases);
+            const microgramsPerHour = currentCase.microgramsPer24Hours / 24;
+            const releasedMicrograms = microgramsPerHour * currentCase.hours;
+            const releasedMg = releasedMicrograms / 1000;
+
+            correctAnswer = releasedMg;
+            answerUnit = "mg";
+            calculationText =
+                `${currentCase.microgramsPer24Hours} µg ÷ 24 timmar = ${formatNumber(microgramsPerHour)} µg/timme<br>` +
+                `${formatNumber(microgramsPerHour)} µg/timme × ${currentCase.hours} timmar = ${formatNumber(releasedMicrograms)} µg<br>` +
+                `${formatNumber(releasedMicrograms)} µg × 1 mg/1000 µg = ${formatNumber(releasedMg)} mg`;
+
+            document.getElementById("problem").textContent =
+                `Ett depotplåster frisätter ${currentCase.microgramsPer24Hours} µg/24 h. ` +
+                `Plåstret har suttit på i ${currentCase.hours} timmar. Hur stor dos i mg har plåstret frisatt under tiden?`;
+            document.getElementById("answerLabel").textContent = "Ange ditt svar i mg:";
+            document.getElementById("answer").value = "";
+            document.getElementById("result").textContent = "";
+            document.getElementById("calculation").innerHTML = "";
+        }
+
+        function checkAnswer() {
+            const rawAnswer = document.getElementById("answer").value.trim().replace(",", ".");
+            const studentAnswer = Number(rawAnswer);
+            const roundedCorrect = Math.round((correctAnswer + Number.EPSILON) * 100) / 100;
+
+            if (rawAnswer === "" || !Number.isFinite(studentAnswer)) {
+                document.getElementById("result").textContent = "Skriv ett giltigt tal.";
+                document.getElementById("result").style.color = "#a33";
+                document.getElementById("calculation").innerHTML = "";
+                return;
+            }
+
+            if (Math.abs(studentAnswer - roundedCorrect) < 0.005) {
+                document.getElementById("result").textContent = "Rätt svar!";
+                document.getElementById("result").style.color = "#195";
+            } else {
+                document.getElementById("result").textContent = `Fel svar. Rätt svar är ${formatNumber(roundedCorrect)} ${answerUnit}.`;
+                document.getElementById("result").style.color = "#a33";
+            }
+
+            document.getElementById("calculation").innerHTML = `<strong>Beräkning:</strong><br>${calculationText}`;
+        }
+
+        document.getElementById("answer").addEventListener("keydown", event => {
+            if (event.key === "Enter") checkAnswer();
+        });
+
+        window.onload = randomizeValues;
+    </script>
+<script src="exam_bridge.js?v=20260827-15"></script>
+</body>
+</html>
+

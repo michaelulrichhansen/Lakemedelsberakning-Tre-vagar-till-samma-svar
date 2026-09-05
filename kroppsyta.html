@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Läkemedelsberäkning – Kroppsyta</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f7f7f7;}
+        h1 { color: #195; }
+        .card { background: #fff; padding: 32px; max-width: 480px; margin: auto; border-radius: 16px; box-shadow: 0 6px 24px #0001;}
+        label, input, button { font-size: 1rem; margin-top: 12px; }
+        input[type="number"], input[type="text"] { width: 140px; padding: 4px 10px; border-radius: 6px; border: 1px solid #aaa;}
+        button { border-radius: 6px; padding: 8px 16px; border: none; background: #3b7; color: #fff; cursor: pointer; }
+        #result { font-weight: bold; margin-top: 16px;}
+        #calculation { color: #555; }
+        @media (max-width: 500px) { body { margin: 16px; } .card { max-width: none; padding: 20px; } h1 { font-size: 1.8rem; } label { display: block; } input[type="number"], input[type="text"] { width: 100%; box-sizing: border-box; } button { display: block; width: 100%; margin-top: 12px; } }
+    </style>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js"></script>
+</head>
+<body>
+<header class="site-brand"><a href="index.html">Läkemedelsberäkning – tre vägar till samma svar</a><p>Formelmetoden, proportionsmetoden och dimensionsanalys</p><p>Michael Ulrich Hansen</p></header>
+    <div class="card">
+        <h1>Läkemedelsberäkning<br>Kroppsyta</h1>
+        <p id="problem"></p>
+        <button onclick="randomizeValues()">Slumpa värden</button>
+        <br><br>
+        <label id="answerLabel" for="answer"></label>
+        <input type="text" id="answer" inputmode="decimal" placeholder="">
+        <button onclick="checkAnswer()">Kontrollera svar</button>
+        <p id="result" aria-live="polite"></p>
+        <p id="calculation"></p>
+        <p style="margin-top:24px;"><a href="index.html" target="_top" style="color:#1166cc;text-decoration:none;">← Till startsidan</a></p>
+    </div>
+    <script>
+        const dosesPerSquareMeter = [10, 20, 25, 30, 40, 50, 75, 100, 125, 150, 200, 250, 300, 400, 500];
+        const bodySurfaces = [0.5, 0.6, 0.8, 1, 1.2, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2, 2.1, 2.2];
+        const volumeCases = [
+            { dosePerSquareMeter: 40, bodySurface: 1.5, strength: 20 },
+            { dosePerSquareMeter: 50, bodySurface: 1.8, strength: 15 },
+            { dosePerSquareMeter: 60, bodySurface: 1.5, strength: 30 },
+            { dosePerSquareMeter: 70, bodySurface: 2, strength: 35 },
+            { dosePerSquareMeter: 75, bodySurface: 1.6, strength: 30 },
+            { dosePerSquareMeter: 80, bodySurface: 1.7, strength: 20 },
+            { dosePerSquareMeter: 90, bodySurface: 1.8, strength: 30 },
+            { dosePerSquareMeter: 100, bodySurface: 1.6, strength: 40 },
+            { dosePerSquareMeter: 125, bodySurface: 2, strength: 50 }
+        ];
+
+        let dosePerSquareMeter, bodySurface, totalDose, questionType;
+        let correctAnswer, calculationText, answerUnit, expectedDecimals;
+        let nextIsVolumeCase = true;
+
+        const pick = values => values[Math.floor(Math.random() * values.length)];
+
+        function formatNumber(value, decimals = 2) {
+            return Number(value.toFixed(decimals)).toString().replace(".", ",");
+        }
+
+        function randomizeValues() {
+            if (nextIsVolumeCase) {
+                nextIsVolumeCase = false;
+                randomizeVolumeCase();
+                return;
+            }
+
+            nextIsVolumeCase = true;
+
+            dosePerSquareMeter = pick(dosesPerSquareMeter);
+            bodySurface = pick(bodySurfaces);
+            totalDose = Number((dosePerSquareMeter * bodySurface).toFixed(1));
+            questionType = Math.floor(Math.random() * 3);
+
+            let problemText = "";
+
+            if (questionType === 0) {
+                correctAnswer = totalDose;
+                answerUnit = "mg";
+                expectedDecimals = Number.isInteger(correctAnswer) ? 0 : 1;
+                problemText = `En patient har en kroppsyta på <strong>${formatNumber(bodySurface, 1)} m²</strong>. Läkemedlet ska doseras med <strong>${formatNumber(dosePerSquareMeter)} mg/m²</strong>. Hur stor total dos i <strong>mg</strong> ska patienten få?`;
+                calculationText = `${formatNumber(dosePerSquareMeter)} mg/m² × ${formatNumber(bodySurface, 1)} m² = ${formatNumber(correctAnswer, 1)} mg`;
+            } else if (questionType === 1) {
+                correctAnswer = dosePerSquareMeter;
+                answerUnit = "mg/m²";
+                expectedDecimals = 0;
+                problemText = `En patient har en kroppsyta på <strong>${formatNumber(bodySurface, 1)} m²</strong> och ska få en total dos på <strong>${formatNumber(totalDose, 1)} mg</strong>. Hur många <strong>mg/m²</strong> motsvarar detta?`;
+                calculationText = `${formatNumber(totalDose, 1)} mg ÷ ${formatNumber(bodySurface, 1)} m² = ${formatNumber(correctAnswer)} mg/m²`;
+            } else {
+                correctAnswer = bodySurface;
+                answerUnit = "m²";
+                expectedDecimals = 1;
+                problemText = `Ett läkemedel ska doseras med <strong>${formatNumber(dosePerSquareMeter)} mg/m²</strong>. Patienten ska få en total dos på <strong>${formatNumber(totalDose, 1)} mg</strong>. Hur stor kroppsyta har patienten i <strong>m²</strong>?`;
+                calculationText = `${formatNumber(totalDose, 1)} mg ÷ ${formatNumber(dosePerSquareMeter)} mg/m² = ${formatNumber(correctAnswer, 1)} m²`;
+            }
+
+            const decimalText = expectedDecimals === 0 ? "heltal" : "en decimal";
+            document.getElementById("problem").innerHTML = problemText;
+            document.getElementById("answerLabel").textContent = `Ange ditt svar i ${answerUnit} (${decimalText}):`;
+            document.getElementById("answer").placeholder = expectedDecimals === 0 ? "Heltal" : "t.ex. 1,2";
+            document.getElementById("result").textContent = "";
+            document.getElementById("calculation").innerHTML = "";
+            document.getElementById("answer").value = "";
+        }
+
+        function randomizeVolumeCase() {
+            const currentCase = pick(volumeCases);
+            const calculatedDose = currentCase.dosePerSquareMeter * currentCase.bodySurface;
+            const volume = calculatedDose / currentCase.strength;
+
+            correctAnswer = volume;
+            answerUnit = "mL";
+            expectedDecimals = Number.isInteger(volume) ? 0 : 1;
+            calculationText =
+                `${currentCase.dosePerSquareMeter} mg/m² × ${formatNumber(currentCase.bodySurface, 1)} m² = ${formatNumber(calculatedDose, 1)} mg<br>` +
+                `${formatNumber(calculatedDose, 1)} mg ÷ ${currentCase.strength} mg/mL = ${formatNumber(volume, 1)} mL`;
+
+            document.getElementById("problem").innerHTML =
+                `Standarddosen för ett läkemedel är <strong>${currentCase.dosePerSquareMeter} mg/m²</strong>. ` +
+                `Patientens kroppsyta är <strong>${formatNumber(currentCase.bodySurface, 1)} m²</strong>. ` +
+                `Läkemedlet har styrkan <strong>${currentCase.strength} mg/mL</strong>. ` +
+                `Hur många <strong>mL</strong> ska ges?`;
+
+            const decimalText = expectedDecimals === 0 ? "heltal" : "en decimal";
+            document.getElementById("answerLabel").textContent = `Ange ditt svar i mL (${decimalText}):`;
+            document.getElementById("answer").placeholder = expectedDecimals === 0 ? "Heltal" : "t.ex. 6,8";
+            document.getElementById("result").textContent = "";
+            document.getElementById("calculation").innerHTML = "";
+            document.getElementById("answer").value = "";
+        }
+
+        function checkAnswer() {
+            const rawAnswer = document.getElementById("answer").value.trim().replace(",", ".");
+            const studentAnswer = Number(rawAnswer);
+            const roundedStudentAnswer = Number(studentAnswer.toFixed(expectedDecimals));
+
+            if (rawAnswer === "" || !Number.isFinite(studentAnswer)) {
+                document.getElementById("result").textContent = "Skriv ett giltigt tal.";
+                document.getElementById("result").style.color = "#a33";
+                document.getElementById("calculation").innerHTML = "";
+                return;
+            }
+
+            if (roundedStudentAnswer === correctAnswer) {
+                document.getElementById("result").textContent = "Rätt svar!";
+                document.getElementById("result").style.color = "#195";
+            } else {
+                document.getElementById("result").textContent = `Fel svar. Det rätta svaret är ${formatNumber(correctAnswer, expectedDecimals)} ${answerUnit}.`;
+                document.getElementById("result").style.color = "#a33";
+            }
+
+            document.getElementById("calculation").innerHTML = `<strong>Beräkning:</strong><br>${calculationText}`;
+        }
+
+        document.getElementById("answer").addEventListener("keydown", event => {
+            if (event.key === "Enter") checkAnswer();
+        });
+
+        window.onload = randomizeValues;
+    </script>
+<script src="exam_bridge.js?v=20260827-15"></script>
+</body>
+</html>
+

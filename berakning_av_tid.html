@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Läkemedelsberäkning – Omvandling av tid</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f7f7f7;}
+        h1 { color: #195; }
+        .card { background: #fff; padding: 32px; max-width: 480px; margin: auto; border-radius: 16px; box-shadow: 0 6px 24px #0001;}
+        label, input, button { font-size: 1rem; margin-top: 12px; }
+        input[type="number"], input[type="text"] { width: 140px; padding: 4px 10px; border-radius: 6px; border: 1px solid #aaa;}
+        button { border-radius: 6px; padding: 8px 16px; border: none; background: #3b7; color: #fff; cursor: pointer; }
+        #result { font-weight: bold; margin-top: 16px;}
+        #calculation { color: #555; }
+        @media (max-width: 500px) { body { margin: 16px; } .card { max-width: none; padding: 20px; } h1 { font-size: 1.8rem; } label { display: block; } input[type="number"], input[type="text"] { width: 100%; box-sizing: border-box; } button { display: block; width: 100%; margin-top: 12px; } }
+    </style>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js"></script>
+</head>
+<body>
+<header class="site-brand"><a href="index.html">Läkemedelsberäkning – tre vägar till samma svar</a><p>Formelmetoden, proportionsmetoden och dimensionsanalys</p><p>Michael Ulrich Hansen</p></header>
+    <div class="card">
+        <h1>Läkemedelsberäkning<br>Omvandling av tid</h1>
+        <p id="problem"></p>
+        <button onclick="generateProblem()">Slumpa värden</button>
+        <br><br>
+        <label id="answerLabel" for="answer"></label>
+        <input type="text" id="answer" inputmode="decimal" placeholder="Ditt svar">
+        <button onclick="checkAnswer()">Kontrollera svar</button>
+        <p id="result" aria-live="polite"></p>
+        <p id="calculation"></p>
+        <p style="margin-top:24px;"><a href="index.html" target="_top" style="color:#1166cc;text-decoration:none;">← Till startsidan</a></p>
+    </div>
+    <script>
+        const decimalHours = [0.1, 0.2, 0.25, 0.4, 0.5, 0.75, 1.25, 1.5, 1.75, 2.25, 2.5, 2.75, 3.5, 4.5, 6.5];
+        const exactMinuteValues = [15, 30, 45, 75, 90, 105, 135, 150, 165, 210, 270, 390];
+        const decimalDurations = [1.25, 1.5, 1.75, 2.25, 2.5, 2.75, 3.25, 3.5, 3.75, 4.5, 5.25, 5.5, 6.75];
+        const wholeHours = [1, 2, 3, 4, 5, 6, 8, 10, 12];
+        const extraMinutes = [15, 30, 45];
+
+        let correctAnswer, answerUnit, calcText;
+        let nextCaseType = 0;
+
+        const pick = values => values[Math.floor(Math.random() * values.length)];
+
+        function formatNumber(value) {
+            return Number(value.toFixed(2)).toString().replace(".", ",");
+        }
+
+        function generateProblem() {
+            const caseType = nextCaseType;
+            nextCaseType = (nextCaseType + 1) % 5;
+
+            if (caseType === 0) {
+                const hours = pick(decimalHours);
+                correctAnswer = hours * 60;
+                answerUnit = "minuter";
+                calcText = `${formatNumber(hours)} timmar × 60 minuter/1 timme = ${correctAnswer} minuter`;
+                document.getElementById("problem").textContent =
+                    `En infusion ska pågå i ${formatNumber(hours)} timmar uttryckt som decimaltal. Hur många minuter motsvarar detta?`;
+            } else if (caseType === 1) {
+                const minutes = pick(exactMinuteValues);
+                correctAnswer = minutes / 60;
+                answerUnit = "timmar";
+                calcText = `${minutes} minuter × 1 timme/60 minuter = ${formatNumber(correctAnswer)} timmar`;
+                document.getElementById("problem").textContent =
+                    `En infusion ska pågå i ${minutes} minuter. Hur många timmar motsvarar detta uttryckt som decimaltal?`;
+            } else if (caseType === 2) {
+                const hours = pick(wholeHours);
+                const hourWord = hours === 1 ? "timme" : "timmar";
+                const minutes = pick(extraMinutes);
+                correctAnswer = hours * 60 + minutes;
+                answerUnit = "minuter";
+                calcText = `${hours} ${hourWord} × 60 minuter/1 timme = ${hours * 60} minuter<br>${hours * 60} minuter + ${minutes} minuter = ${correctAnswer} minuter`;
+                document.getElementById("problem").textContent =
+                    `En behandling ska pågå i ${hours} ${hourWord} och ${minutes} minuter. Hur många minuter är det sammanlagt?`;
+            } else if (caseType === 3) {
+                const hours = pick(wholeHours);
+                const hourWord = hours === 1 ? "timme" : "timmar";
+                const wholeHourText = hours === 1 ? "1 hel timme" : `${hours} hela timmar`;
+                const minutes = pick(extraMinutes);
+                const totalMinutes = hours * 60 + minutes;
+                correctAnswer = minutes;
+                answerUnit = "minuter";
+                calcText = `${hours} ${hourWord} × 60 minuter/1 timme = ${hours * 60} minuter<br>${totalMinutes} minuter − ${hours * 60} minuter = ${correctAnswer} minuter`;
+                document.getElementById("problem").textContent =
+                    `${totalMinutes} minuter motsvarar ${wholeHourText} och hur många minuter?`;
+            } else {
+                const decimalDuration = pick(decimalDurations);
+                const wholeHourPart = Math.floor(decimalDuration);
+                const wholeHourText = wholeHourPart === 1 ? "1 hel timme" : `${wholeHourPart} hela timmar`;
+                const decimalHourPart = decimalDuration - wholeHourPart;
+                correctAnswer = Math.round(decimalHourPart * 60);
+                answerUnit = "minuter";
+                calcText = `${formatNumber(decimalDuration)} timmar = ${wholeHourText} + ${formatNumber(decimalHourPart)} timmar<br>` +
+                    `${formatNumber(decimalHourPart)} timmar × 60 minuter/1 timme = ${correctAnswer} minuter`;
+                document.getElementById("problem").textContent =
+                    `${formatNumber(decimalDuration)} timmar motsvarar ${wholeHourText} och hur många minuter?`;
+            }
+
+            document.getElementById("answerLabel").textContent = `Ange ditt svar i ${answerUnit}:`;
+            document.getElementById("answer").value = "";
+            document.getElementById("result").textContent = "";
+            document.getElementById("calculation").textContent = "";
+        }
+
+        function checkAnswer() {
+            const rawAnswer = document.getElementById("answer").value.trim().replace(",", ".");
+            const userAnswer = Number(rawAnswer);
+
+            if (rawAnswer === "" || !Number.isFinite(userAnswer)) {
+                document.getElementById("result").textContent = "Skriv ett giltigt tal.";
+                document.getElementById("result").style.color = "#a33";
+                document.getElementById("calculation").textContent = "";
+                return;
+            }
+
+            if (Math.abs(userAnswer - correctAnswer) < 0.001) {
+                document.getElementById("result").textContent = "Rätt svar!";
+                document.getElementById("result").style.color = "#195";
+            } else {
+                document.getElementById("result").textContent = `Fel svar. Det rätta svaret är ${formatNumber(correctAnswer)} ${answerUnit}.`;
+                document.getElementById("result").style.color = "#a33";
+            }
+
+            document.getElementById("calculation").textContent = `Beräkning: ${calcText}`;
+        }
+
+        document.getElementById("answer").addEventListener("keydown", event => {
+            if (event.key === "Enter") checkAnswer();
+        });
+
+        window.onload = generateProblem;
+    </script>
+<script src="exam_bridge.js?v=20260827-15"></script>
+</body>
+</html>
+

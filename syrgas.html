@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Läkemedelsberäkning – Syrgas</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f7f7f7;}
+        h1 { color: #195; }
+        .card { background: #fff; padding: 32px; max-width: 540px; margin: auto; border-radius: 16px; box-shadow: 0 6px 24px #0001;}
+        label, input, button { font-size: 1rem; margin-top: 12px; }
+        input[type="number"], input[type="text"] { width: 140px; padding: 4px 10px; border-radius: 6px; border: 1px solid #aaa;}
+        button { border-radius: 6px; padding: 8px 16px; border: none; background: #3b7; color: #fff; cursor: pointer; }
+        #result { font-weight: bold; margin-top: 16px;}
+        #calculation { color: #555; }
+        @media (max-width: 500px) { body { margin: 16px; } .card { max-width: none; padding: 20px; } h1 { font-size: 1.8rem; } label { display: block; } input[type="number"], input[type="text"] { width: 100%; box-sizing: border-box; } button { display: block; width: 100%; margin-top: 12px; } }
+    </style>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js"></script>
+</head>
+<body>
+<header class="site-brand"><a href="index.html">Läkemedelsberäkning – tre vägar till samma svar</a><p>Formelmetoden, proportionsmetoden och dimensionsanalys</p><p>Michael Ulrich Hansen</p></header>
+    <div class="card">
+        <h1>Läkemedelsberäkning<br>Syrgas</h1>
+        <p id="problem"></p>
+        <button onclick="randomizeCase()">Slumpa värden</button>
+        <br><br>
+        <label id="answerLabel" for="answer"></label>
+        <input type="text" id="answer" inputmode="decimal" placeholder="Svara med heltal">
+        <button onclick="checkAnswer()">Kontrollera svar</button>
+        <p id="result" aria-live="polite"></p>
+        <p id="calculation"></p>
+        <p style="font-size:0.95em;color:#444;">
+            Svara med ett heltal. Både punkt och komma accepteras som decimaltecken.
+        </p>
+        <p style="margin-top:24px;"><a href="index.html" target="_top" style="color:#1166cc;text-decoration:none;">← Till startsidan</a></p>
+    </div>
+    <script>
+        const cylinderVolumes = [2, 3, 5, 10];
+        const pressures = [50, 75, 100, 120, 150, 180, 200];
+        const flows = [1, 2, 3, 4, 5, 6, 8, 10];
+        const minimumPressureCases = [
+            { cylinderVolume: 5, flow: 2, durationMinutes: 90 },
+            { cylinderVolume: 5, flow: 4, durationMinutes: 150 },
+            { cylinderVolume: 3, flow: 2, durationMinutes: 60 },
+            { cylinderVolume: 10, flow: 3, durationMinutes: 150 },
+            { cylinderVolume: 2, flow: 4, durationMinutes: 45 }
+        ];
+        const sufficiencyCases = [
+            { cylinderVolume: 5, pressure: 130, flow: 4, durationMinutes: 150 },
+            { cylinderVolume: 3, pressure: 54, flow: 2, durationMinutes: 60 },
+            { cylinderVolume: 10, pressure: 85, flow: 3, durationMinutes: 150 },
+            { cylinderVolume: 5, pressure: 34, flow: 4, durationMinutes: 45 },
+            { cylinderVolume: 2, pressure: 125, flow: 4, durationMinutes: 45 }
+        ];
+        const comparisonCases = [
+            { flow: 4, durationMinutes: 45, aVolume: 5, aPressure: 34, bVolume: 2, bPressure: 125 },
+            { flow: 3, durationMinutes: 90, aVolume: 2, aPressure: 100, bVolume: 5, bPressure: 60 },
+            { flow: 2, durationMinutes: 120, aVolume: 3, aPressure: 70, bVolume: 2, bPressure: 130 },
+            { flow: 5, durationMinutes: 60, aVolume: 5, aPressure: 65, bVolume: 2, bPressure: 140 }
+        ];
+
+        let cylinderVolume, pressure, flow, totalVolume, durationMinutes;
+        let caseType, correctAnswer, answerUnit, calcText;
+        let correctChoice = "";
+        let nextCaseType = 4;
+
+        const pick = values => values[Math.floor(Math.random() * values.length)];
+
+        function formatTime(minutes) {
+            const hours = Math.floor(minutes / 60);
+            const remainingMinutes = minutes % 60;
+            if (hours === 0) return `${minutes} minuter`;
+            if (remainingMinutes === 0) return `${hours} ${hours === 1 ? "timme" : "timmar"}`;
+            return `${hours} ${hours === 1 ? "timme" : "timmar"} och ${remainingMinutes} minuter`;
+        }
+
+        function createValues() {
+            do {
+                cylinderVolume = pick(cylinderVolumes);
+                pressure = pick(pressures);
+                flow = pick(flows);
+                totalVolume = cylinderVolume * pressure;
+                durationMinutes = totalVolume / flow;
+            } while (!Number.isInteger(durationMinutes) || durationMinutes < 30 || durationMinutes > 600);
+        }
+
+        function randomizeCase() {
+            createValues();
+            // Börja med tentamensvarianten "Räcker syrgasen?" och gå sedan
+            // igenom alla frågetyper. Värdena i varje uppgift slumpas fortfarande.
+            caseType = nextCaseType;
+            nextCaseType = (nextCaseType + 1) % 6;
+            correctChoice = "";
+
+            if (caseType === 0) {
+                correctAnswer = totalVolume;
+                answerUnit = "liter";
+                calcText = `${pressure} bar × ${cylinderVolume} L/1 bar = ${correctAnswer} liter syrgas`;
+                document.getElementById("problem").textContent =
+                    `En syrgasflaska har en flaskvolym på ${cylinderVolume} L och manometern visar ${pressure} bar. Hur många liter syrgas innehåller flaskan?`;
+            } else if (caseType === 1) {
+                correctAnswer = durationMinutes;
+                answerUnit = "minuter";
+                calcText = `${pressure} bar × ${cylinderVolume} L/1 bar = ${totalVolume} liter syrgas. ${totalVolume} liter syrgas ÷ ${flow} liter syrgas/minut = ${correctAnswer} minuter`;
+                document.getElementById("problem").textContent =
+                    `En syrgasflaska har en flaskvolym på ${cylinderVolume} L och manometern visar ${pressure} bar. Patienten får ${flow} L syrgas/minut. Hur många minuter räcker flaskan?`;
+            } else if (caseType === 2) {
+                correctAnswer = flow;
+                answerUnit = "L/min";
+                calcText = `${pressure} bar × ${cylinderVolume} L/1 bar = ${totalVolume} liter syrgas. ${totalVolume} liter syrgas ÷ ${durationMinutes} minuter = ${correctAnswer} liter syrgas/minut`;
+                document.getElementById("problem").textContent =
+                    `En syrgasflaska har en flaskvolym på ${cylinderVolume} L och manometern visar ${pressure} bar. Syrgasen ska räcka i ${durationMinutes} minuter. Vilket flöde i L/min motsvarar detta?`;
+            } else if (caseType === 3) {
+                const currentCase = pick(minimumPressureCases);
+                const need = currentCase.flow * currentCase.durationMinutes;
+                correctAnswer = need / currentCase.cylinderVolume;
+                answerUnit = "bar";
+                calcText = `${currentCase.durationMinutes} minuter × ${currentCase.flow} liter syrgas/minut = ${need} liter syrgas. ${need} liter syrgas × 1 bar/${currentCase.cylinderVolume} L = ${correctAnswer} bar`;
+                document.getElementById("problem").textContent =
+                    `En patient behöver ${currentCase.flow} liter syrgas/minut under en transport som tar ${formatTime(currentCase.durationMinutes)}. Du har en syrgasflaska med flaskvolymen ${currentCase.cylinderVolume} L. Vilket är det lägsta trycket som manometern måste visa för att syrgasen ska räcka? Resttryck behöver inte beaktas.`;
+            } else if (caseType === 4) {
+                const currentCase = pick(sufficiencyCases);
+                const available = currentCase.cylinderVolume * currentCase.pressure;
+                const need = currentCase.flow * currentCase.durationMinutes;
+                correctAnswer = available - need;
+                correctChoice = correctAnswer >= 0 ? "ja" : "nej";
+                answerUnit = "liter";
+                const differenceText = correctAnswer >= 0
+                    ? `${correctAnswer} liter överskott`
+                    : `${Math.abs(correctAnswer)} liter underskott`;
+                calcText = `${currentCase.pressure} bar × ${currentCase.cylinderVolume} L/1 bar = ${available} liter tillgänglig syrgas.<br>${currentCase.durationMinutes} minuter × ${currentCase.flow} liter syrgas/minut = ${need} liter syrgas behövs.<br>${available} liter syrgas − ${need} liter syrgas = ${correctAnswer} liter syrgas, alltså ${differenceText}.`;
+                document.getElementById("problem").textContent =
+                    `En patient behöver ${currentCase.flow} liter syrgas/minut under en transport som tar ${formatTime(currentCase.durationMinutes)}. Syrgasflaskan har flaskvolymen ${currentCase.cylinderVolume} L och trycket ${currentCase.pressure} bar. Räcker syrgasen? Svara ja eller nej och ange antal liter överskott eller underskott. Resttryck behöver inte beaktas.`;
+            } else {
+                const currentCase = pick(comparisonCases);
+                const need = currentCase.flow * currentCase.durationMinutes;
+                const availableA = currentCase.aVolume * currentCase.aPressure;
+                const availableB = currentCase.bVolume * currentCase.bPressure;
+                correctChoice = availableA >= need ? "a" : "b";
+                correctAnswer = correctChoice;
+                answerUnit = "flaska";
+                calcText = `${currentCase.durationMinutes} minuter × ${currentCase.flow} liter syrgas/minut = ${need} liter syrgas behövs.<br>Flaska A: ${currentCase.aPressure} bar × ${currentCase.aVolume} L/1 bar = ${availableA} liter syrgas.<br>Flaska B: ${currentCase.bPressure} bar × ${currentCase.bVolume} L/1 bar = ${availableB} liter syrgas.<br>Alltså ska flaska ${correctChoice.toUpperCase()} väljas.`;
+                document.getElementById("problem").textContent =
+                    `En patient behöver ${currentCase.flow} liter syrgas/minut under en transport som tar ${formatTime(currentCase.durationMinutes)}. Flaska A har flaskvolymen ${currentCase.aVolume} L och trycket ${currentCase.aPressure} bar. Flaska B har flaskvolymen ${currentCase.bVolume} L och trycket ${currentCase.bPressure} bar. Vilken flaska ska väljas för att syrgasen ska räcka? Resttryck behöver inte beaktas.`;
+            }
+
+            if (caseType === 4) {
+                document.getElementById("answerLabel").textContent = "Svara exempelvis: ja, 50 liter överskott:";
+                document.getElementById("answer").placeholder = "ja 50 eller nej 20";
+            } else if (caseType === 5) {
+                document.getElementById("answerLabel").textContent = "Ange flaska A eller B:";
+                document.getElementById("answer").placeholder = "A eller B";
+            } else {
+                document.getElementById("answerLabel").textContent = `Ange ditt svar i ${answerUnit} (heltal):`;
+                document.getElementById("answer").placeholder = "Svara med heltal";
+            }
+            document.getElementById("result").textContent = "";
+            document.getElementById("calculation").textContent = "";
+            document.getElementById("answer").value = "";
+        }
+
+        function checkAnswer() {
+            const rawAnswer = document.getElementById("answer").value.trim().toLowerCase().replace(",", ".");
+            const userAnswer = Number(rawAnswer);
+
+            if (rawAnswer === "") {
+                document.getElementById("result").textContent = "Skriv ett giltigt tal.";
+                document.getElementById("result").style.color = "#a33";
+                document.getElementById("calculation").textContent = "";
+                return;
+            }
+
+            let isCorrect = false;
+            let correctAnswerText = `${correctAnswer} ${answerUnit}`;
+
+            if (caseType === 4) {
+                const statedChoice = rawAnswer.includes("nej") ? "nej" : rawAnswer.includes("ja") ? "ja" : "";
+                const numberMatch = rawAnswer.match(/\d+(?:\.\d+)?/);
+                const statedDifference = numberMatch ? Number(numberMatch[0]) : NaN;
+                isCorrect = statedChoice === correctChoice && statedDifference === Math.abs(correctAnswer);
+                correctAnswerText = correctAnswer >= 0
+                    ? `ja, ${correctAnswer} liter överskott`
+                    : `nej, ${Math.abs(correctAnswer)} liter underskott`;
+            } else if (caseType === 5) {
+                const statedBottle = rawAnswer.replace(/flaska|\s/g, "");
+                isCorrect = statedBottle === correctChoice;
+                correctAnswerText = `flaska ${correctChoice.toUpperCase()}`;
+            } else {
+                isCorrect = Number.isFinite(userAnswer) && userAnswer === correctAnswer;
+            }
+
+            if (isCorrect) {
+                document.getElementById("result").textContent = "Rätt svar!";
+                document.getElementById("result").style.color = "#195";
+            } else {
+                document.getElementById("result").textContent = `Fel svar. Rätt svar är ${correctAnswerText}.`;
+                document.getElementById("result").style.color = "#a33";
+            }
+
+            document.getElementById("calculation").innerHTML = `<strong>Beräkning:</strong><br>${calcText}`;
+        }
+
+        document.getElementById("answer").addEventListener("keydown", event => {
+            if (event.key === "Enter") checkAnswer();
+        });
+
+        window.onload = randomizeCase;
+    </script>
+<script src="exam_bridge.js?v=20260827-16"></script>
+</body>
+</html>
+
